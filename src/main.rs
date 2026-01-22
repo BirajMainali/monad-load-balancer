@@ -1,6 +1,6 @@
-use crate::model::Config;
+mod config;
 
-pub mod model;
+use config::model::Config;
 
 #[tokio::main]
 async fn main() {

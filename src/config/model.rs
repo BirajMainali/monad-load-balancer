@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use tokio::fs;
 
 /// Root configuration for the load balancer system.
 ///
@@ -87,12 +86,4 @@ pub enum Algorithm {
     RoundRobin,
     /// Distribution based on predefined server weights.
     WeightedRoundRobin,
-}
-
-impl Config {
-    pub async fn get_config() -> Result<Config, std::io::Error> {
-        let content = fs::read_to_string("config.yaml").await.unwrap();
-        let config: Config = serde_yaml::from_str(&content.as_str()).unwrap();
-        return Ok(config);
-    }
 }

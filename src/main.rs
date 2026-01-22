@@ -1,9 +1,9 @@
 mod config;
 
-use config::model::Config;
+use config::loader::get_config;
 
 #[tokio::main]
 async fn main() {
-    let config = Config::get_config().await.unwrap();
+    let config = get_config().await.unwrap();
     println!("Config : {:?}", config);
 }

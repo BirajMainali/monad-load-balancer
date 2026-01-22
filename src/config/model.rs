@@ -37,7 +37,7 @@ pub struct Balancer {
 }
 
 /// A specific server destination where traffic is routed.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[allow(dead_code)]
 pub struct Backend {
     /// Unique identifier for the server (e.g., "srv-01").

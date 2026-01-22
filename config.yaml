@@ -1,7 +1,7 @@
 balancer:
   algorithm: "adaptive_least_conn"
   check_interval_ms: 500
-  port: 80
+  port: 8080
 
 backends:
   - id: "srv-01"

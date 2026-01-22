@@ -1,0 +1,20 @@
+balancer:
+  algorithm: "adaptive_least_conn"
+  check_interval_ms: 500
+  port: 80
+
+backends:
+  - id: "srv-01"
+    address: "10.0.0.1:8080"
+    max_connections: 1000
+    weight: 1.0
+    
+  - id: "srv-02"
+    address: "10.0.0.2:8080"
+    max_connections: 1000
+    weight: 1.0
+
+thresholds:
+  latency_critical_ms: 200 # If higher, lower the weight
+  error_rate_limit: 0.05   # If 5% fail, cut traffic (Circuit Break)
+  recovery_step: 0.1       # How much weight to add back when it recovers

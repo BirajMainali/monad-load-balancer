@@ -1,5 +1,5 @@
 [package]
-name = "monad-load-balancer"
+name = "monad_load_balancer"
 version = "0.1.0"
 edition = "2024"
 

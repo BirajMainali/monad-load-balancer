@@ -227,7 +227,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "monad-load-balancer"
+name = "monad_load_balancer"
 version = "0.1.0"
 dependencies = [
  "anyhow",

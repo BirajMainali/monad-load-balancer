@@ -1,13 +1,13 @@
 use serde::{Deserialize, Serialize};
-use crate::config::algorithm_cfg::Algorithm;
+use crate::config::algorithm_cfg::AlgorithmCfg;
 
 /// Settings defining how the balancer operates.
 #[derive(Debug, Serialize, Deserialize)]
 #[allow(dead_code)]
-pub struct BalancerCfg {
+pub struct BalancerServerCfg {
     /// The specific strategy used to distribute traffic.
     #[serde[rename = "algorithm"]]
-    pub algorithm: Algorithm,
+    pub algorithm: AlgorithmCfg,
 
     /// Frequency of health checks in milliseconds.
     #[serde(rename = "check_interval_ms")]

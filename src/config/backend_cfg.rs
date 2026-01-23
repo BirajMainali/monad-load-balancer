@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 /// A specific server destination where traffic is routed.
 #[derive(Debug, Serialize, Deserialize)]
 #[allow(dead_code)]
-pub struct Backend {
+pub struct BackendCfg {
     /// Unique identifier for the server (e.g., "srv-01").
     #[serde(rename = "id")]
     pub id: String,
@@ -14,7 +14,7 @@ pub struct Backend {
 
     /// Maximum concurrent connections allowed for this backend.
     #[serde(rename = "max_connections")]
-    pub max_connections: i32,
+    pub max_conn: i32,
 
     /// Relative priority/capacity of this backend compared to others.
     #[serde(rename = "weight")]

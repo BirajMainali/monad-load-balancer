@@ -1,13 +1,13 @@
 use crate::config::backend_cfg::BackendCfg;
-use std::sync::atomic::AtomicU64;
+use std::sync::atomic::AtomicU32;
 pub struct Backend {
     pub id: String,
     pub addr: String,
     pub max_conn: i32,
     pub base_weight: f32,
     pub current_weight: f32,
-    pub active_conn: AtomicU64,
-    pub avg_latency: AtomicU64,
+    pub active_conn: AtomicU32,
+    pub avg_latency: AtomicU32,
     pub error_rate: f32,
 }
 
@@ -19,8 +19,8 @@ impl Backend {
             max_conn: cfg.max_conn,
             base_weight: cfg.weight,
             current_weight: cfg.weight,
-            active_conn: AtomicU64::new(0),
-            avg_latency: AtomicU64::new(0),
+            active_conn: AtomicU32::new(0),
+            avg_latency: AtomicU32::new(0),
             error_rate: 0.0,
         }
     }

@@ -3,6 +3,7 @@ use crate::state::backend_state::Backend;
 use crate::state::shared_state::SharedState;
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
+use std::time::Instant;
 use tokio::io::{copy, split};
 use tokio::net::TcpStream;
 use tokio::try_join;
@@ -19,6 +20,7 @@ impl Balancer {
     }
 
     pub async fn resolve(&self, client: TcpStream) -> anyhow::Result<()> {
+        let start = Instant::now();
         let row_guard = self.state.read().await;
 
         // step 1: filter non-negotiable candidates
@@ -35,12 +37,14 @@ impl Balancer {
         match index {
             Some(idx) => {
                 let backend = candidates[idx];
-                dbg!(format!(
-                    "Resolving Address : {} Active Conn : {} Index : {}",
-                    backend.addr.clone(),
-                    backend.active_conn.load(Ordering::Relaxed),
-                    idx
-                ));
+                let elapsed = start.elapsed();
+                // [TODO]: make this configurable and export to external platform, Need to spawn new thread.
+                println!(
+                    "Idx :{} Address : {} Duration: {} \n",
+                    idx,
+                    backend.addr,
+                    elapsed.as_secs_f64()
+                );
                 backend.active_conn.fetch_add(1, Ordering::Relaxed);
                 self.proxy(client, backend.addr.clone()).await?;
                 backend.active_conn.fetch_sub(1, Ordering::Relaxed);

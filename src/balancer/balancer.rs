@@ -35,6 +35,12 @@ impl Balancer {
         match index {
             Some(idx) => {
                 let backend = candidates[idx];
+                dbg!(format!(
+                    "Resolving Address : {} Active Conn : {} Index : {}",
+                    backend.addr.clone(),
+                    backend.active_conn.load(Ordering::Relaxed),
+                    idx
+                ));
                 backend.active_conn.fetch_add(1, Ordering::Relaxed);
                 self.proxy(client, backend.addr.clone()).await?;
                 backend.active_conn.fetch_sub(1, Ordering::Relaxed);

@@ -1,16 +1,26 @@
 balancer:
   algorithm: "round_robin"
   check_interval_ms: 500
-  port: 8080
+  port: 8081
 
 backends:
   - id: "srv-01"
-    address: "https://restcountries.com/"
+    address: "0.0.0.0:9001"
     max_connections: 1000
     weight: 1.0
 
   - id: "srv-02"
-    address: "https://restcountries.com/"
+    address: "0.0.0.0:9002"
+    max_connections: 1000
+    weight: 1.0
+
+  - id: "srv-02"
+    address: "0.0.0.0:9003"
+    max_connections: 1000
+    weight: 1.0
+
+  - id: "srv-02"
+    address: "0.0.0.0:9004"
     max_connections: 1000
     weight: 1.0
 

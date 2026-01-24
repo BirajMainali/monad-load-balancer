@@ -34,8 +34,6 @@ async fn main() {
         .await
         .expect("failed to bind server port, Please make sure address is available");
 
-    println!("Listening on {}", server_port);
-
     loop {
         let (client, client_addr) = listener.accept().await.unwrap();
         println!("Accepted connection from {}", client_addr);

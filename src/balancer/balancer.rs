@@ -1,8 +1,6 @@
-use crate::balancer::algorithm::LoadBalancingAlgorithm;
 use crate::balancer::algorithms::traits::load_balancer_algorithm::LoadBalancingAlgorithm;
 use crate::state::backend_state::Backend;
 use crate::state::shared_state::SharedState;
-use std::io;
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
 use tokio::io::{copy, split};
@@ -20,7 +18,7 @@ impl Balancer {
         Self { state, algorithm }
     }
 
-    pub async fn resolve(&self, client: TcpStream) -> io::Result<()> {
+    pub async fn resolve(&self, client: TcpStream) -> anyhow::Result<()> {
         let row_guard = self.state.read().await;
 
         // step 1: filter non-negotiable candidates
@@ -29,39 +27,32 @@ impl Balancer {
             .iter()
             .filter(|b| b.active_conn.load(Ordering::Relaxed) < b.max_conn as u32)
             .filter(|b| b.current_weight > 0.0)
+            .map(|b| b)
             .collect();
 
-        // step 2: select backend using algorithm
-        let idx = self
-            .algorithm
-            .select(&candidates)
-            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "no backend available"))?;
+        let index = self.algorithm.select_backend(&candidates);
 
-        let backend = candidates[idx];
-
-        // IMPORTANT: release lock before async I/O
-        drop(row_guard);
-
-        // step 3: proxy traffic
-        self.proxy(client, backend).await
+        match index {
+            Some(idx) => {
+                let backend = candidates[idx];
+                backend.active_conn.fetch_add(1, Ordering::Relaxed);
+                self.proxy(client, backend.addr.clone()).await?;
+                backend.active_conn.fetch_sub(1, Ordering::Relaxed);
+            }
+            _ => {
+                todo!("Need to implement certain pooling or wait")
+            }
+        }
+        Ok(())
     }
 
-    async fn proxy(&self, client: TcpStream, backend_state: &Backend) -> io::Result<()> {
-        backend_state.active_conn.fetch_add(1, Ordering::Relaxed);
-
-        let addr = backend_state.addr.clone();
-        let backend = TcpStream::connect(addr).await?;
-
+    async fn proxy(&self, client: TcpStream, backend_addr: String) -> anyhow::Result<()> {
+        let backend = TcpStream::connect(backend_addr).await?;
         let (mut cr, mut cw) = split(client);
         let (mut br, mut bw) = split(backend);
-
         let client_to_backend = copy(&mut cr, &mut bw);
         let backend_to_client = copy(&mut br, &mut cw);
-
         try_join!(client_to_backend, backend_to_client)?;
-
-        backend_state.active_conn.fetch_sub(1, Ordering::Relaxed);
-
         Ok(())
     }
 }

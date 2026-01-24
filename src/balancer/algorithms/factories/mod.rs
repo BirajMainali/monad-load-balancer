@@ -1,1 +1,1 @@
-mod algorithm_factory;
+pub mod algorithm_factory;

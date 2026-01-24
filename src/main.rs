@@ -1,3 +1,4 @@
+use monad_load_balancer::balancer::algorithms::factories::algorithm_factory::AlgorithmFactory;
 use monad_load_balancer::balancer::balancer::Balancer;
 use monad_load_balancer::config::load_balancer_cfg::LoadBalancerCfg;
 use monad_load_balancer::state::backend_state::Backend;
@@ -9,12 +10,16 @@ use tokio::sync::RwLock;
 
 #[tokio::main]
 async fn main() {
-    let cfg = LoadBalancerCfg::load().await.unwrap();
-    let server_port = format!("0.0.0.0:{}", cfg.balancer_cfg.port);
+    let cfg = LoadBalancerCfg::load()
+        .await
+        .expect("load balancer cfg failed");
+    dbg!(&cfg);
+
+    let server_port = format!("127.0.0.1:{}", cfg.balancer_cfg.port);
 
     let state: SharedState = Arc::new(RwLock::new(GlobalState {
-        thresholds_cfg: cfg.thresholds_cfg,
-        balancer_cfg: cfg.balancer_cfg,
+        thresholds_cfg: cfg.thresholds_cfg.clone(),
+        balancer_cfg: cfg.balancer_cfg.clone(),
         backends: cfg
             .backends
             .into_iter()
@@ -22,10 +27,15 @@ async fn main() {
             .collect(),
     }));
 
-    let listener = TcpListener::bind(server_port).await.unwrap();
+    let algorithm = AlgorithmFactory::select_algorithm(&cfg.balancer_cfg.algorithm);
+    let balancer = Balancer::new(state, algorithm);
+
+    let listener = TcpListener::bind(&server_port)
+        .await
+        .expect("failed to bind server port, Please make sure address is available");
+
     println!("Listening on {}", server_port);
 
-    let balancer = Balancer::new(state);
     loop {
         let (client, client_addr) = listener.accept().await.unwrap();
         println!("Accepted connection from {}", client_addr);

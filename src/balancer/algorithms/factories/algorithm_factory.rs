@@ -4,11 +4,15 @@ use crate::balancer::algorithms::traits::load_balancer_algorithm::LoadBalancingA
 use crate::config::algorithm_cfg::AlgorithmCfg;
 use std::sync::Arc;
 
-pub fn algorithm_factory(cfg: &AlgorithmCfg) -> Arc<dyn LoadBalancingAlgorithm> {
-    match cfg {
-        AlgorithmCfg::RoundRobin => Arc::new(RoundRobin::new()),
-        AlgorithmCfg::LeastConn => Arc::new(LeastConn::new()),
-        AlgorithmCfg::AdaptiveLeastConn => todo!(),
-        AlgorithmCfg::WeightedRoundRobin => todo!(),
+pub struct AlgorithmFactory;
+
+impl AlgorithmFactory {
+    pub fn select_algorithm(cfg: &AlgorithmCfg) -> Arc<dyn LoadBalancingAlgorithm> {
+        match cfg {
+            AlgorithmCfg::RoundRobin => Arc::new(RoundRobin::new()),
+            AlgorithmCfg::LeastConn => Arc::new(LeastConn::new()),
+            AlgorithmCfg::AdaptiveLeastConn => todo!(),
+            AlgorithmCfg::WeightedRoundRobin => todo!(),
+        }
     }
 }

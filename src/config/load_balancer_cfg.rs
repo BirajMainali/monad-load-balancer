@@ -7,7 +7,7 @@ use tokio::fs;
 /// Root configuration for the load balancer system.
 ///
 /// This structure maps directly to the top-level keys of the configuration file.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[allow(dead_code)]
 pub struct LoadBalancerCfg {
     /// Core settings for the balancing logic and networking.

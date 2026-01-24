@@ -15,7 +15,7 @@ impl RoundRobin {
 }
 
 impl LoadBalancingAlgorithm for RoundRobin {
-    fn select_backend(&self, backends: &[Backend]) -> Option<usize> {
+    fn select_backend(&self, backends: &Vec<&Backend>) -> Option<usize> {
         if backends.is_empty() {
             return None;
         }

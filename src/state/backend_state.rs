@@ -1,5 +1,6 @@
 use crate::config::backend_cfg::BackendCfg;
 use std::sync::atomic::AtomicU32;
+
 pub struct Backend {
     pub id: String,
     pub addr: String,

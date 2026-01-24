@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 /// Rules for circuit breaking and health monitoring.
 #[derive(Debug, Serialize, Deserialize)]
 #[allow(dead_code)]
+#[derive(Clone)]
 pub struct ThresholdsCfg {
     /// Maximum response time allowed before a backend is flagged.
     #[serde(rename = "latency_critical_ms")]

@@ -1,8 +1,8 @@
-use serde::{Deserialize, Serialize};
 use crate::config::algorithm_cfg::AlgorithmCfg;
+use serde::{Deserialize, Serialize};
 
 /// Settings defining how the balancer operates.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[allow(dead_code)]
 pub struct BalancerServerCfg {
     /// The specific strategy used to distribute traffic.

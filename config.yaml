@@ -1,16 +1,16 @@
 balancer:
-  algorithm: "adaptive_least_conn"
+  algorithm: "round_robin"
   check_interval_ms: 500
-  port: 80
+  port: 8080
 
 backends:
   - id: "srv-01"
-    address: "10.0.0.1:8080"
+    address: "https://restcountries.com/"
     max_connections: 1000
     weight: 1.0
-    
+
   - id: "srv-02"
-    address: "10.0.0.2:8080"
+    address: "https://restcountries.com/"
     max_connections: 1000
     weight: 1.0
 

@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 /// A specific server destination where traffic is routed.
 #[derive(Debug, Serialize, Deserialize)]
 #[allow(dead_code)]
+#[derive(Clone)]
 pub struct BackendCfg {
     /// Unique identifier for the server (e.g., "srv-01").
     #[serde(rename = "id")]

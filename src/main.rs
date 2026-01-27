@@ -1,4 +1,4 @@
-use monad_load_balancer::balancer::algorithms::factories::algorithm_factory::Algorithm;
+use monad_load_balancer::algorithms::factories::algorithm::Algorithm;
 use monad_load_balancer::balancer::balancer::Balancer;
 use monad_load_balancer::config::load_balancer_cfg::LoadBalancerCfg;
 use monad_load_balancer::health::health::Health;

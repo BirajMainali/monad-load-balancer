@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize)]
 #[allow(dead_code)]
 #[derive(Clone)]
-pub struct BackendCfg {
+pub struct BackendConfig {
     /// Unique identifier for the server (e.g., "srv-01").
     #[serde(rename = "id")]
     pub id: String,
@@ -15,9 +15,9 @@ pub struct BackendCfg {
 
     /// Maximum concurrent connections allowed for this backend.
     #[serde(rename = "max_connections")]
-    pub max_conn: u64,
+    pub max_conn: i32,
 
     /// Relative priority/capacity of this backend compared to others.
     #[serde(rename = "weight")]
-    pub weight: u64,
+    pub weight: f32,
 }

@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use crate::balancer::algorithms::traits::load_balancer_algorithm::LoadBalancingAlgorithm;
 use crate::state::backend_state::Backend;
 use std::sync::atomic::Ordering;
@@ -11,7 +12,7 @@ impl LeastConn {
 }
 
 impl LoadBalancingAlgorithm for LeastConn {
-    fn select_backend(&self, backends: &Vec<&Backend>) -> Option<usize> {
+    fn select_backend(&self, backends: &Vec<Arc<Backend>>) -> Option<usize> {
         backends
             .iter()
             .enumerate()

@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 pub struct ThresholdsCfg {
     /// Maximum response time allowed before a backend is flagged.
     #[serde(rename = "latency_critical_ms")]
-    pub latency_critical_ms: u64,
+    pub latency_critical_ms: f32,
 
     /// The ratio (0.0 - 1.0) of allowed failed requests.
     #[serde(rename = "error_rate_limit")]
@@ -15,5 +15,5 @@ pub struct ThresholdsCfg {
 
     /// The increment by which weight is restored during server recovery.
     #[serde(rename = "recovery_step")]
-    pub recovery_step: u64,
+    pub recovery_step: f32,
 }

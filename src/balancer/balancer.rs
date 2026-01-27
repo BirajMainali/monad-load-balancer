@@ -1,62 +1,52 @@
 use crate::balancer::algorithms::traits::load_balancer_algorithm::LoadBalancingAlgorithm;
 use crate::state::backend_state::Backend;
-use crate::state::shared_state::SharedState;
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
-use std::time::Instant;
 use tokio::io::{copy, split};
 use tokio::net::TcpStream;
+use tokio::sync::RwLock;
 use tokio::try_join;
 
 #[derive(Clone)]
 pub struct Balancer {
-    state: SharedState,
+    active_backends: Arc<RwLock<Vec<Arc<Backend>>>>,
     algorithm: Arc<dyn LoadBalancingAlgorithm>,
 }
 
 impl Balancer {
-    pub fn new(state: SharedState, algorithm: Arc<dyn LoadBalancingAlgorithm>) -> Self {
-        Self { state, algorithm }
+    pub fn new(
+        algorithm: Arc<dyn LoadBalancingAlgorithm>,
+        active_backends: Arc<RwLock<Vec<Arc<Backend>>>>,
+    ) -> Self {
+        Self {
+            algorithm,
+            active_backends,
+        }
     }
 
-    pub async fn resolve(&self, client: TcpStream) -> anyhow::Result<()> {
-        let start = Instant::now();
-        let row_guard = self.state.read().await;
+    pub async fn route_connection(&self, client: TcpStream) -> anyhow::Result<()> {
+        let rg = self.active_backends.read().await;
 
-        // step 1: filter non-negotiable candidates
-        let candidates: Vec<&Backend> = row_guard
-            .backends
+        let candidates = rg
             .iter()
-            .filter(|b| b.active_conn.load(Ordering::Relaxed) < b.max_conn as u32)
-            .filter(|b| b.current_weight > 0.0)
-            .map(|b| b)
+            .filter(|b| b.has_no_wight() || b.is_max_conn_reached())
+            .map(|x| x.clone())
             .collect();
 
-        let index = self.algorithm.select_backend(&candidates);
+        let selected = match self.algorithm.select_backend(&candidates) {
+            Some(i) => i,
+            None => todo!("Implement waiting for certain time."),
+        };
 
-        match index {
-            Some(idx) => {
-                let backend = candidates[idx];
-                let elapsed = start.elapsed();
-                // [TODO]: make this configurable and export to external platform, Need to spawn new thread.
-                println!(
-                    "Idx :{} Address : {} Duration: {} \n",
-                    idx,
-                    backend.addr,
-                    elapsed.as_secs_f64()
-                );
-                backend.active_conn.fetch_add(1, Ordering::Relaxed);
-                self.proxy(client, backend.addr.clone()).await?;
-                backend.active_conn.fetch_sub(1, Ordering::Relaxed);
-            }
-            _ => {
-                todo!("Need to implement certain pooling or wait")
-            }
-        }
-        Ok(())
+        let backend = candidates[selected].clone();
+        backend.active_conn.fetch_add(1, Ordering::Relaxed);
+        let result = self.perform_routing(client, backend.addr.clone()).await;
+        backend.active_conn.fetch_sub(1, Ordering::Relaxed);
+
+        result
     }
 
-    async fn proxy(&self, client: TcpStream, backend_addr: String) -> anyhow::Result<()> {
+    async fn perform_routing(&self, client: TcpStream, backend_addr: String) -> anyhow::Result<()> {
         let backend = TcpStream::connect(backend_addr).await?;
         let (mut cr, mut cw) = split(client);
         let (mut br, mut bw) = split(backend);

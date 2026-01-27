@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use crate::balancer::algorithms::traits::load_balancer_algorithm::LoadBalancingAlgorithm;
 use crate::state::backend_state::Backend;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -15,7 +16,7 @@ impl RoundRobin {
 }
 
 impl LoadBalancingAlgorithm for RoundRobin {
-    fn select_backend(&self, backends: &Vec<&Backend>) -> Option<usize> {
+    fn select_backend(&self, backends: &Vec<Arc<Backend>>) -> Option<usize> {
         if backends.is_empty() {
             return None;
         }

@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
 #[derive(Clone)]
-pub enum AlgorithmType {
+pub enum AlgorithmConfig {
     /// Routes traffic to the server with the fewest active connections.
     LeastConn,
     /// Adjusts routing based on real-time backend latency.

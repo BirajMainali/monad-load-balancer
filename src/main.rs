@@ -1,9 +1,8 @@
 use monad_load_balancer::balancer::algorithms::factories::algorithm_factory::AlgorithmFactory;
 use monad_load_balancer::balancer::balancer::Balancer;
 use monad_load_balancer::config::load_balancer_cfg::LoadBalancerCfg;
+use monad_load_balancer::health::health::Health;
 use monad_load_balancer::state::backend_state::Backend;
-use monad_load_balancer::state::global_state::GlobalState;
-use monad_load_balancer::state::shared_state::SharedState;
 use std::sync::Arc;
 use tokio::net::TcpListener;
 use tokio::sync::RwLock;
@@ -15,20 +14,26 @@ async fn main() {
         .expect("load balancer cfg failed");
     dbg!(&cfg);
 
-    let server_port = format!("127.0.0.1:{}", cfg.balancer_cfg.port);
+    let server_port = format!("0.0.0.0:{}", cfg.balancer_cfg.port);
 
-    let state: SharedState = Arc::new(RwLock::new(GlobalState {
-        thresholds_cfg: cfg.thresholds_cfg.clone(),
-        balancer_cfg: cfg.balancer_cfg.clone(),
-        backends: cfg
+    let backends: Arc<RwLock<Vec<Arc<Backend>>>> = {
+        let backend = cfg
             .backends
-            .into_iter()
-            .map(|b| Backend::from_cfg(&b))
-            .collect(),
-    }));
+            .iter()
+            .map(|b| Arc::new(Backend::from_cfg(b)))
+            .collect();
+        Arc::new(RwLock::new(backend))
+    };
 
-    let algorithm = AlgorithmFactory::select_algorithm(&cfg.balancer_cfg.algorithm);
-    let balancer = Balancer::new(state, algorithm);
+    let config = cfg.clone();
+    let health_backends = backends.clone();
+    tokio::spawn(async move {
+        let health = Health::new(config.thresholds_cfg, config.balancer_cfg, health_backends);
+        health.observe_and_tune_backends().await.unwrap();
+    });
+
+    let algorithm = AlgorithmFactory::select_algorithm(cfg.balancer_cfg.algorithm);
+    let balancer = Balancer::new(algorithm, backends);
 
     let listener = TcpListener::bind(&server_port)
         .await
@@ -40,7 +45,7 @@ async fn main() {
 
         let balancer = balancer.clone();
         tokio::spawn(async move {
-            if let Err(e) = balancer.resolve(client).await {
+            if let Err(e) = balancer.route_connection(client).await {
                 eprintln!("Error proxying connection: {:?}", e);
             }
         });

@@ -5,5 +5,6 @@ use crate::state::backend_state::Backend;
 pub struct GlobalState {
     pub thresholds_cfg: ThresholdsCfg,
     pub backends: Vec<Backend>,
+    pub active_backends: Vec<Backend>,
     pub balancer_cfg: BalancerServerCfg,
 }

@@ -1,8 +1,8 @@
-use monad_load_balancer::balancer::algorithms::factories::algorithm_factory::AlgorithmFactory;
+use monad_load_balancer::balancer::algorithms::factories::algorithm_factory::Algorithm;
 use monad_load_balancer::balancer::balancer::Balancer;
 use monad_load_balancer::config::load_balancer_cfg::LoadBalancerCfg;
 use monad_load_balancer::health::health::Health;
-use monad_load_balancer::state::backend_state::Backend;
+use monad_load_balancer::state::backend::Backend;
 use std::sync::Arc;
 use tokio::net::TcpListener;
 use tokio::sync::RwLock;
@@ -27,12 +27,13 @@ async fn main() {
 
     let config = cfg.clone();
     let health_backends = backends.clone();
+
     tokio::spawn(async move {
         let health = Health::new(config.thresholds_cfg, config.balancer_cfg, health_backends);
         health.observe_and_tune_backends().await.unwrap();
     });
 
-    let algorithm = AlgorithmFactory::select_algorithm(cfg.balancer_cfg.algorithm);
+    let algorithm = Algorithm::select(cfg.balancer_cfg.algorithm);
     let balancer = Balancer::new(algorithm, backends);
 
     let listener = TcpListener::bind(&server_port)

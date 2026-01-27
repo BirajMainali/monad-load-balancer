@@ -1,6 +1,5 @@
 use crate::config::backend_cfg::BackendCfg;
-use std::sync::atomic::Ordering::Relaxed;
-use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicU64, Ordering};
 
 #[derive(Debug)]
 pub struct Backend {

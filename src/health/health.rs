@@ -1,6 +1,6 @@
 use crate::config::balancer_server_cfg::BalancerServerCfg;
 use crate::config::thresholds_cfg::ThresholdsCfg;
-use crate::state::backend_state::Backend;
+use crate::state::backend::Backend;
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
 use std::time::Duration;

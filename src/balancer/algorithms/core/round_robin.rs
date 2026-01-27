@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use crate::balancer::algorithms::traits::load_balancer_algorithm::LoadBalancingAlgorithm;
-use crate::state::backend_state::Backend;
+use crate::state::backend::Backend;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 pub struct RoundRobin {

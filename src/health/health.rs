@@ -6,26 +6,52 @@ use std::sync::atomic::Ordering;
 use std::time::Duration;
 use tokio::net::TcpStream;
 use tokio::sync::RwLock;
+use tokio::sync::mpsc::Sender;
 use tokio::time::{Instant, sleep, timeout};
+
+#[derive(Debug)]
+pub enum HealthEvent {
+    WeightDecreased {
+        addr: String,
+        old: u64,
+        new: u64,
+        latency_ms: u64,
+    },
+    WeightIncreased {
+        addr: String,
+        old: u64,
+        new: u64,
+        latency_ms: u64,
+    },
+    BackendDown {
+        addr: String,
+    },
+    Error {
+        err: String,
+    },
+}
 
 pub struct Health {
     threshold: ThresholdsCfg,
     balancer: BalancerServerCfg,
     backends: Arc<RwLock<Vec<Arc<Backend>>>>,
+    health_tx: Sender<HealthEvent>,
 }
 impl Health {
     pub fn new(
         threshold: ThresholdsCfg,
         balancer: BalancerServerCfg,
         backends: Arc<RwLock<Vec<Arc<Backend>>>>,
+        health_tx: Sender<HealthEvent>,
     ) -> Self {
         Self {
             threshold,
             balancer,
             backends,
+            health_tx,
         }
     }
-    pub async fn observe_and_tune_backends(&self) -> anyhow::Result<()> {
+    pub async fn watchdog(&self) -> anyhow::Result<()> {
         loop {
             let backends = {
                 let rg = self.backends.read().await;
@@ -34,6 +60,7 @@ impl Health {
             for backend in backends {
                 let addr = backend.addr.clone();
                 let curr_weight = backend.current_weight.load(Ordering::Relaxed);
+
                 let result =
                     Self::get_current_backend_latency(&addr, self.threshold.latency_critical_ms)
                         .await;
@@ -49,16 +76,34 @@ impl Health {
                                 let new_wight =
                                     std::cmp::max(0, curr_weight - self.threshold.recovery_step);
                                 backend.current_weight.swap(new_wight, Ordering::Relaxed);
+
+                                self.health_tx
+                                    .send(HealthEvent::WeightDecreased {
+                                        addr: addr.clone(),
+                                        old: curr_weight,
+                                        new: new_wight,
+                                        latency_ms: latency,
+                                    })
+                                    .await?;
                             }
                             // If the latency is good (not exceeded) and the wight is low which shows booting or adjusting.
                             // so that setting wight incrementally
                             false => {
                                 if backend.is_weight_low(curr_weight) {
-                                    let new_wight = std::cmp::max(
+                                    let new_weight = std::cmp::max(
                                         backend.base_weight,
                                         curr_weight + self.threshold.recovery_step,
                                     );
-                                    backend.current_weight.swap(new_wight, Ordering::Relaxed);
+                                    backend.current_weight.swap(new_weight, Ordering::Relaxed);
+
+                                    self.health_tx
+                                        .send(HealthEvent::WeightIncreased {
+                                            addr: addr.clone(),
+                                            old: curr_weight,
+                                            new: new_weight,
+                                            latency_ms: latency,
+                                        })
+                                        .await?;
                                 }
                             }
                         }
@@ -67,6 +112,10 @@ impl Health {
                         // If any error occurred while performing ping then setting the wight = 0.
                         // Which means, applying circuit breaker unless it warm up.
                         backend.current_weight.swap(0, Ordering::Relaxed);
+
+                        self.health_tx
+                            .send(HealthEvent::BackendDown { addr: addr.clone() })
+                            .await?;
                     }
                 }
             }
@@ -84,5 +133,10 @@ impl Health {
             Ok(Err(_)) => None,
             Err(_) => None,
         }
+    }
+
+    async fn emit(&self, event: HealthEvent) -> anyhow::Result<()> {
+        self.health_tx.send(event).await?;
+        Ok(())
     }
 }

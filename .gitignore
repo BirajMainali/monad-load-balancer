@@ -2,3 +2,4 @@
 .vscode/
 .idea/
 /scripts/boostrap/srv*
+./log.txt

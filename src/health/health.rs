@@ -1,5 +1,6 @@
 use crate::config::balancer_server_cfg::BalancerServerCfg;
 use crate::config::thresholds_cfg::ThresholdsCfg;
+use crate::logging::events::exporter_event::ExporterEvent;
 use crate::state::backend::Backend;
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
@@ -9,40 +10,18 @@ use tokio::sync::RwLock;
 use tokio::sync::mpsc::Sender;
 use tokio::time::{Instant, sleep, timeout};
 
-#[derive(Debug)]
-pub enum HealthEvent {
-    WeightDecreased {
-        addr: String,
-        old: u64,
-        new: u64,
-        latency_ms: u64,
-    },
-    WeightIncreased {
-        addr: String,
-        old: u64,
-        new: u64,
-        latency_ms: u64,
-    },
-    BackendDown {
-        addr: String,
-    },
-    Error {
-        err: String,
-    },
-}
-
 pub struct Health {
     threshold: ThresholdsCfg,
     balancer: BalancerServerCfg,
     backends: Arc<RwLock<Vec<Arc<Backend>>>>,
-    health_tx: Sender<HealthEvent>,
+    health_tx: Sender<ExporterEvent>,
 }
 impl Health {
     pub fn new(
         threshold: ThresholdsCfg,
         balancer: BalancerServerCfg,
         backends: Arc<RwLock<Vec<Arc<Backend>>>>,
-        health_tx: Sender<HealthEvent>,
+        health_tx: Sender<ExporterEvent>,
     ) -> Self {
         Self {
             threshold,
@@ -51,7 +30,7 @@ impl Health {
             health_tx,
         }
     }
-    pub async fn watchdog(&self) -> anyhow::Result<()> {
+    pub async fn monitor(&self) -> anyhow::Result<()> {
         loop {
             let backends = {
                 let rg = self.backends.read().await;
@@ -78,7 +57,7 @@ impl Health {
                                 backend.current_weight.swap(new_wight, Ordering::Relaxed);
 
                                 self.health_tx
-                                    .send(HealthEvent::WeightDecreased {
+                                    .send(ExporterEvent::WeightDecreased {
                                         addr: addr.clone(),
                                         old: curr_weight,
                                         new: new_wight,
@@ -97,7 +76,7 @@ impl Health {
                                     backend.current_weight.swap(new_weight, Ordering::Relaxed);
 
                                     self.health_tx
-                                        .send(HealthEvent::WeightIncreased {
+                                        .send(ExporterEvent::WeightIncreased {
                                             addr: addr.clone(),
                                             old: curr_weight,
                                             new: new_weight,
@@ -114,7 +93,7 @@ impl Health {
                         backend.current_weight.swap(0, Ordering::Relaxed);
 
                         self.health_tx
-                            .send(HealthEvent::BackendDown { addr: addr.clone() })
+                            .send(ExporterEvent::BackendDown { addr: addr.clone() })
                             .await?;
                     }
                 }
@@ -133,10 +112,5 @@ impl Health {
             Ok(Err(_)) => None,
             Err(_) => None,
         }
-    }
-
-    async fn emit(&self, event: HealthEvent) -> anyhow::Result<()> {
-        self.health_tx.send(event).await?;
-        Ok(())
     }
 }

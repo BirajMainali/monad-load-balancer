@@ -1,7 +1,10 @@
 use monad_load_balancer::algorithms::factories::algorithm::Algorithm;
 use monad_load_balancer::balancer::balancer::Balancer;
 use monad_load_balancer::config::load_balancer_cfg::LoadBalancerCfg;
-use monad_load_balancer::health::health::{Health, HealthEvent};
+use monad_load_balancer::health::health::Health;
+use monad_load_balancer::logging::events::exporter_event::ExporterEvent;
+use monad_load_balancer::logging::exporters::file_exporter::FileExporter;
+use monad_load_balancer::logging::logging_exporter::Exporter;
 use monad_load_balancer::state::backend::Backend;
 use std::sync::Arc;
 use tokio::net::TcpListener;
@@ -10,7 +13,7 @@ use tokio::sync::{RwLock, mpsc};
 
 #[tokio::main]
 async fn main() {
-    let (health_tx, mut health_rx): (Sender<HealthEvent>, Receiver<HealthEvent>) =
+    let (exporter_tx, exporter_rx): (Sender<ExporterEvent>, Receiver<ExporterEvent>) =
         mpsc::channel(8 * 1024);
 
     let cfg = LoadBalancerCfg::load()
@@ -31,7 +34,7 @@ async fn main() {
     {
         let config = cfg.clone();
         let health_backends = backends.clone();
-        let health_tx = health_tx.clone();
+        let health_tx = exporter_tx.clone();
 
         tokio::spawn(async move {
             let health = Health::new(
@@ -41,13 +44,18 @@ async fn main() {
                 health_tx,
             );
 
-            health.watchdog().await.unwrap();
+            health.monitor().await.unwrap();
+        });
+
+        tokio::spawn(async move {
+            let exporter = Exporter::new(FileExporter::new("./log.txt"));
+            exporter.run(exporter_rx).await.unwrap();
         });
     }
 
     let algorithm = Algorithm::select(cfg.balancer_cfg.algorithm);
     let balancer = Balancer::new(algorithm, backends);
-    let health_tx = health_tx.clone();
+    let health_tx = exporter_tx.clone();
 
     let listener = TcpListener::bind(&server_port)
         .await
@@ -63,7 +71,7 @@ async fn main() {
         tokio::spawn(async move {
             if let Err(e) = balancer.route_connection(client).await {
                 health_tx
-                    .send(HealthEvent::Error {
+                    .send(ExporterEvent::Error {
                         err: format!("Failed to route connection: {}", e),
                     })
                     .await

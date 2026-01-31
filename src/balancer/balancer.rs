@@ -29,7 +29,7 @@ impl Balancer {
 
         let candidates = rg
             .iter()
-            .filter(|b| !b.has_no_wight() || !b.is_max_conn_reached())
+            .filter(|b| !b.has_no_wight() && !b.is_max_conn_reached())
             .map(|x| x.clone())
             .collect();
 

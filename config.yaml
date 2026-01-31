@@ -7,24 +7,24 @@ backends:
   - id: "srv-01"
     address: "0.0.0.0:9001"
     max_connections: 1000
-    weight: 1.0
+    weight: 10
 
   - id: "srv-02"
     address: "0.0.0.0:9002"
     max_connections: 1000
-    weight: 1.0
+    weight: 10
 
   - id: "srv-02"
     address: "0.0.0.0:9003"
     max_connections: 1000
-    weight: 1.0
+    weight: 10
 
   - id: "srv-02"
     address: "0.0.0.0:9004"
     max_connections: 1000
-    weight: 1.0
+    weight: 10
 
 thresholds:
-  latency_critical_ms: 200 # If higher, lower the weight
-  error_rate_limit: 0.05   # If 5% fail, cut traffic (Circuit Break)
-  recovery_step: 0.1       # How much weight to add back when it recovers
+  latency_critical_ms: 200
+  error_rate_limit: 5
+  recovery_step: 2

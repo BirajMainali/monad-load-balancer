@@ -3,8 +3,10 @@ use monad_load_balancer::balancer::balancer::Balancer;
 use monad_load_balancer::config::load_balancer_cfg::LoadBalancerCfg;
 use monad_load_balancer::health::health::Health;
 use monad_load_balancer::logging::events::exporter_event::ExporterEvent;
+use monad_load_balancer::logging::exporters::console_exporter::ConsoleExporter;
 use monad_load_balancer::logging::exporters::file_exporter::FileExporter;
 use monad_load_balancer::logging::logging_exporter::Exporter;
+use monad_load_balancer::logging::traits::log_exporter::LogExporter;
 use monad_load_balancer::state::backend::Backend;
 use std::sync::Arc;
 use tokio::net::TcpListener;
@@ -48,7 +50,12 @@ async fn main() {
         });
 
         tokio::spawn(async move {
-            let exporter = Exporter::new(FileExporter::new("./log.txt"));
+            let exporters: Vec<Arc<dyn LogExporter + Send + Sync>> = vec![
+                Arc::new(FileExporter::new("./log.txt")),
+                Arc::new(ConsoleExporter),
+            ];
+
+            let exporter = Exporter::new(exporters);
             exporter.run(exporter_rx).await.unwrap();
         });
     }

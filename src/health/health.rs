@@ -46,6 +46,16 @@ impl Health {
 
                 match result {
                     Some(latency) => {
+                        // Update average latency with exponential moving average
+                        let current_avg = backend.avg_latency_ms.load(Ordering::Relaxed);
+                        let new_avg = if current_avg == 0 {
+                            latency as usize
+                        } else {
+                            // EMA with alpha = 0.3 (30% weight to new measurement)
+                            (current_avg * 7 + latency as usize * 3) / 10
+                        };
+                        backend.avg_latency_ms.store(new_avg, Ordering::Relaxed);
+
                         match backend
                             .exceeds_latency_threshold(latency, self.threshold.latency_critical_ms)
                         {

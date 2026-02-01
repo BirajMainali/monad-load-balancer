@@ -1,5 +1,5 @@
 use crate::config::backend_cfg::BackendCfg;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 
 #[derive(Debug)]
 pub struct Backend {
@@ -9,6 +9,7 @@ pub struct Backend {
     pub base_weight: u64,
     pub current_weight: AtomicU64,
     pub active_conn: AtomicU64,
+    pub avg_latency_ms: AtomicUsize,
 }
 
 impl Backend {
@@ -19,6 +20,7 @@ impl Backend {
             max_conn: cfg.max_conn,
             base_weight: cfg.weight,
             current_weight: AtomicU64::new(cfg.weight),
+            avg_latency_ms: AtomicUsize::new(0),
             active_conn: AtomicU64::new(0),
         }
     }

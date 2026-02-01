@@ -1,5 +1,5 @@
 balancer:
-  algorithm: "least_conn"
+  algorithm: "adaptive_least_conn"
   check_interval_ms: 500
   port: 9090
 

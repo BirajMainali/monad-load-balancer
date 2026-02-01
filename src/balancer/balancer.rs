@@ -1,10 +1,13 @@
 use crate::algorithms::traits::load_balancer_algorithm::LoadBalancingAlgorithm;
 use crate::state::backend::Backend;
+use anyhow::bail;
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
+use std::time::Duration;
 use tokio::io::{copy, split};
 use tokio::net::TcpStream;
 use tokio::sync::RwLock;
+use tokio::time::sleep;
 use tokio::try_join;
 
 #[derive(Clone)]
@@ -25,17 +28,24 @@ impl Balancer {
     }
 
     pub async fn route_connection(&self, client: TcpStream) -> anyhow::Result<()> {
-        let rg = self.active_backends.read().await;
+        let candidates = self.get_eligible_candidates().await;
+        let mut selected = self.algorithm.select_backend(&candidates);
 
-        let candidates = rg
-            .iter()
-            .filter(|b| !b.has_no_wight() && !b.is_max_conn_reached())
-            .map(|x| x.clone())
-            .collect();
+        // [todo]: need to make these things configurable.
+        let mut retry_count = 0;
+        let max_retries = 3;
+        let retry_delay = Duration::from_millis(100);
 
-        let selected = match self.algorithm.select_backend(&candidates) {
+        while selected.is_none() && retry_count < max_retries {
+            sleep(retry_delay).await;
+            let candidates = self.get_eligible_candidates().await;
+            selected = self.algorithm.select_backend(&candidates);
+            retry_count += 1;
+        }
+
+        let selected = match selected {
             Some(i) => i,
-            None => todo!("Implement waiting for certain time."),
+            None => bail!("No available backends after {} retries", max_retries),
         };
 
         let backend = candidates[selected].clone();
@@ -44,6 +54,14 @@ impl Balancer {
         backend.active_conn.fetch_sub(1, Ordering::Relaxed);
 
         result
+    }
+
+    async fn get_eligible_candidates(&self) -> Vec<Arc<Backend>> {
+        let rg = self.active_backends.read().await;
+        rg.iter()
+            .filter(|b| b.has_some_wight() && !b.is_max_conn_reached())
+            .map(|x| x.clone())
+            .collect()
     }
 
     async fn perform_routing(&self, client: TcpStream, backend_addr: String) -> anyhow::Result<()> {

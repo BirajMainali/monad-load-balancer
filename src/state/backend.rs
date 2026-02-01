@@ -51,6 +51,10 @@ impl Backend {
         self.current_weight.load(Ordering::Relaxed) <= 0
     }
 
+    pub fn has_some_wight(&self) -> bool {
+        self.current_weight.load(Ordering::Relaxed) > 0
+    }
+
     pub fn is_max_conn_reached(&self) -> bool {
         self.active_conn.load(Ordering::Relaxed) > self.max_conn
     }
